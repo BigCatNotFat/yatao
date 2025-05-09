@@ -5,6 +5,7 @@ eventlet.monkey_patch()
 # 然后导入其他模块
 from flask import Flask, render_template
 from flask_socketio import SocketIO, emit
+import threading
 import serial
 import time
 import os
@@ -16,9 +17,9 @@ app = Flask(__name__)
 socketio = SocketIO(app, async_mode='eventlet', cors_allowed_origins="*", ping_timeout=10, ping_interval=5)
 
 # 串口配置
-serial_connected = False
 ser = None
-last_reconnect_attempt = 0
+serial_connected = False
+last_reconnect_time = 0
 
 # 数据发送控制
 last_sent_data = None
@@ -26,7 +27,7 @@ send_counter = 0
 last_error_time = 0
 
 def connect_serial():
-    """尝试连接串口设备，支持自动重连"""
+    """连接串口设备"""
     global ser, serial_connected
     
     try:
@@ -34,47 +35,17 @@ def connect_serial():
         if ser is not None:
             try:
                 ser.close()
-                time.sleep(0.5)  # 等待端口释放
             except:
                 pass
         
-        # 对于Windows系统使用COM端口，对于Linux使用/dev
-        if os.name == 'nt':
-            port = 'COM3'  # 请根据实际情况调整Windows端口
-        else:
-            port = '/dev/ttyUSB0'  # 请根据实际情况调整Linux端口
+        # 选择正确的串口设备
+        if os.name == 'nt':  # Windows
+            port = 'COM3'  # 请根据实际情况调整
+        else:  # Linux/Mac
+            port = '/dev/ttyUSB0'
             
-        # 检查设备是否存在
-        if os.name != 'nt' and not os.path.exists(port):
-            print(f"错误: 设备 {port} 不存在")
-            return False
-            
-        # 建立新连接 - 禁用硬件流控制，增加更长的超时
-        ser = serial.Serial(
-            port=port,
-            baudrate=115200,
-            bytesize=serial.EIGHTBITS,
-            parity=serial.PARITY_NONE,
-            stopbits=serial.STOPBITS_ONE,
-            xonxoff=False,     # 禁用软件流控
-            rtscts=False,      # 禁用硬件RTS/CTS流控
-            dsrdtr=False,      # 禁用硬件DSR/DTR流控
-            timeout=1,         # 读取超时
-            write_timeout=1    # 写入超时
-        )
-        
-        # 在Linux上尝试获取独占访问权
-        if os.name != 'nt':
-            try:
-                # 避免在Windows上导入错误
-                fcntl.flock(ser.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-            except (ImportError, IOError, AttributeError) as e:
-                print(f"无法获取串口独占访问: {e}")
-        
-        # 清空缓冲区
-        ser.reset_input_buffer()
-        ser.reset_output_buffer()
-        
+        # 建立连接
+        ser = serial.Serial(port, 115200, timeout=1)
         serial_connected = True
         print(f"串口设备 {port} 连接成功")
         return True
@@ -83,7 +54,7 @@ def connect_serial():
         print(f"串口连接失败: {e}")
         return False
 
-# 初始连接尝试
+# 初始连接
 connect_serial()
 
 # 定义解析函数，提取64个点的数据
@@ -148,113 +119,35 @@ def serial_listener():
     """
     持续监听串口，解析数据并通过 Socket.IO 推送到前端。
     """
-    global last_sent_data, send_counter, serial_connected, ser, last_reconnect_attempt, last_error_time
-    buffer = bytearray()
-    error_count = 0
-    read_interval = 0.05  # 20Hz读取频率，降低访问频率
-    last_read_time = 0
+    global ser, serial_connected, last_reconnect_time
     
     while True:
+        # 检查串口连接状态，如果断开则尝试重连
+        if not serial_connected:
+            current_time = time.time()
+            if current_time - last_reconnect_time > 5:  # 每5秒尝试一次
+                last_reconnect_time = current_time
+                connect_serial()
+            time.sleep(0.5)
+            continue
+            
         try:
-            current_time = time.time()
+            # 读取帧头 - 保持原始简单逻辑
+            frame_header = ser.read(3)
+            if frame_header == b'\xAA\xAB\xAC':  # 检测帧头
+                data = frame_header + ser.read(513)  # 读取完整帧
+                if len(data) == 516:  # 验证数据帧长度
+                    points = parse_data_frame(data)
+                    if points:  # 如果解析成功
+                        # 推送数据到前端
+                        socketio.emit('update_colors', {'values': points})
             
-            # 检查串口连接状态
-            if not serial_connected:
-                # 每5秒尝试一次重连
-                if current_time - last_reconnect_attempt > 5:
-                    last_reconnect_attempt = current_time
-                    if connect_serial():
-                        buffer = bytearray()  # 重置缓冲区
-                        error_count = 0
-                eventlet.sleep(0.5)
-                continue
-            
-            # 控制读取频率
-            if current_time - last_read_time < read_interval:
-                eventlet.sleep(0.01)
-                continue
-                
-            last_read_time = current_time
-                
-            # 安全读取数据
-            new_data = safe_read(512)  # 一次最多读取512字节
-            
-            if new_data:
-                buffer.extend(new_data)
-                error_count = 0  # 重置错误计数
-            else:
-                # 如果连续多次没有读到数据，增加错误计数
-                error_count += 1
-                if error_count > 100:  # 更高的容错阈值
-                    error_count = 0
-                    if ser and serial_connected:
-                        print("长时间无数据，尝试重置串口")
-                        try:
-                            ser.reset_input_buffer()
-                        except Exception as e:
-                            print(f"重置缓冲区失败: {e}")
-                            serial_connected = False
-                
-                eventlet.sleep(0.05)
-                continue
-            
-            # 寻找帧头
-            while True:
-                header_pos = buffer.find(b'\xAA\xAB\xAC')
-                if header_pos < 0 or len(buffer) < header_pos + 516:
-                    break  # 没有找到完整帧，等待更多数据
-                    
-                # 帧同步，丢弃帧头前的数据
-                if header_pos > 0:
-                    buffer = buffer[header_pos:]
-                    header_pos = 0
-                    continue  # 重新检查
-                
-                # 提取完整数据帧
-                if len(buffer) >= 516:
-                    frame = buffer[:516]
-                    buffer = buffer[516:]  # 更新缓冲区
-                    
-                    # 解析数据
-                    points = parse_data_frame(frame)
-                    if points:
-                        # 减少发送频率避免大波动
-                        should_send = False
-                        
-                        # 检查数据变化
-                        if last_sent_data is None:
-                            should_send = True
-                        else:
-                            # 计算数据变化量
-                            change_count = sum(1 for old, new in zip(last_sent_data, points) if abs(old - new) > 5)
-                            if change_count > 8:  # 如果超过8个点有较大变化则发送
-                                should_send = True
-                        
-                        # 根据计数器定期发送
-                        if send_counter >= 3:  # 每3个有效帧发送一次
-                            should_send = True
-                        
-                        if should_send:
-                            try:
-                                socketio.emit('update_colors', {'values': points})
-                                last_sent_data = points.copy()  # 使用copy避免引用问题
-                                send_counter = 0
-                            except Exception as e:
-                                print(f"数据发送错误: {e}")
-                        else:
-                            send_counter += 1
-                else:
-                    break  # 等待更多数据
-            
-            # 控制循环延迟
-            eventlet.sleep(0.01)
-            
+            # 保持原始延迟
+            time.sleep(0.1)
         except Exception as e:
-            current_time = time.time()
-            if current_time - last_error_time > 5:
-                print(f"监听错误: {e}")
-                last_error_time = current_time
-            eventlet.sleep(0.1)
+            print(f"串口读取错误: {e}")
+            serial_connected = False  # 标记连接断开
+            time.sleep(0.5)
 
 @app.route('/')
 def index():
@@ -271,18 +164,18 @@ def status():
     return {"connected": serial_connected}
 
 
-# 添加重置串口端点
+# 添加重置端点
 @app.route('/api/reset')
 def reset_serial():
-    """重置串口连接"""
+    """手动重置串口连接"""
     global serial_connected
     serial_connected = False
     return {"status": "重置中", "success": True}
 
 
 if __name__ == '__main__':
-    # 使用eventlet启动串口监听线程
-    eventlet.spawn(serial_listener)
+    # 启动串口监听线程
+    threading.Thread(target=serial_listener, daemon=True).start()
     # 运行SocketIO服务器
     socketio.run(app, host='0.0.0.0', port=5000, debug=True)
 
