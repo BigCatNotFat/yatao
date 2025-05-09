@@ -23,12 +23,11 @@ last_reconnect_time = 0
 
 # 控制数据发送频率的变量
 last_data_send_time = 0
-data_send_interval = 0.5  # 500毫秒发送一次
+data_send_interval = 2.0  # 2秒发送一次，大幅降低频率
 
-# 数据发送控制
+# 数据变化监控
 last_sent_data = None
-send_counter = 0
-last_error_time = 0
+min_change_threshold = 20  # 至少有20%的数据点变化才发送新数据
 
 def connect_serial():
     """连接串口设备"""
@@ -88,6 +87,20 @@ def parse_data_frame(data):
 
     return points
 
+def data_has_significant_change(old_data, new_data):
+    """检查数据是否有显著变化"""
+    if not old_data or not new_data:
+        return True
+        
+    # 计算变化显著的点数
+    changes = sum(1 for old, new in zip(old_data, new_data) if abs(old - new) > 10)
+    
+    # 计算变化百分比
+    change_percent = (changes / len(old_data)) * 100
+    
+    # 如果变化百分比超过阈值，认为有显著变化
+    return change_percent >= min_change_threshold
+
 def safe_read(length):
     """安全读取串口数据，处理可能的异常"""
     global ser, serial_connected
@@ -123,10 +136,12 @@ def serial_listener():
     """
     持续监听串口，解析数据并通过 Socket.IO 推送到前端。
     """
-    global ser, serial_connected, last_reconnect_time, last_data_send_time
+    global ser, serial_connected, last_reconnect_time, last_data_send_time, last_sent_data
     
     # 最后一次成功解析的数据帧
-    last_points = None
+    current_points = None
+    read_error_count = 0
+    print_log_count = 0  # 用于限制日志打印频率
     
     while True:
         # 检查串口连接状态，如果断开则尝试重连
@@ -135,7 +150,7 @@ def serial_listener():
             if current_time - last_reconnect_time > 5:  # 每5秒尝试一次
                 last_reconnect_time = current_time
                 connect_serial()
-            time.sleep(0.5)
+            time.sleep(1.0)  # 增加重连等待时间
             continue
             
         try:
@@ -147,22 +162,43 @@ def serial_listener():
                     points = parse_data_frame(data)
                     if points:  # 如果解析成功
                         # 更新最新数据
-                        last_points = points
+                        current_points = points
+                        read_error_count = 0  # 重置错误计数
                         
                         # 检查是否应该发送数据
                         current_time = time.time()
-                        if current_time - last_data_send_time >= data_send_interval:
+                        should_send = False
+                        
+                        # 时间间隔检查
+                        time_ok = current_time - last_data_send_time >= data_send_interval
+                        
+                        # 数据变化检查
+                        change_ok = data_has_significant_change(last_sent_data, current_points)
+                        
+                        # 满足条件则发送
+                        if time_ok and (change_ok or not last_sent_data):
                             # 推送数据到前端
-                            socketio.emit('update_colors', {'values': points})
-                            # 打印接收到的数据
-                            print(f"Updated U-shape grid with values: {points}")
+                            socketio.emit('update_colors', {'values': current_points})
+                            
+                            # 限制打印频率，每10次发送才打印一次
+                            print_log_count += 1
+                            if print_log_count >= 10:
+                                print(f"已更新数据，变化率: {(sum(1 for old, new in zip(last_sent_data or current_points, current_points) if abs(old - new) > 10) / len(current_points) * 100):.1f}%")
+                                print_log_count = 0
+                                
+                            # 更新发送时间和数据
                             last_data_send_time = current_time
+                            last_sent_data = current_points.copy()
             
-            # 保持原始延迟
-            time.sleep(0.1)
+            # 延长循环延迟到200ms，减少CPU占用
+            time.sleep(0.2)
         except Exception as e:
-            print(f"串口读取错误: {e}")
-            serial_connected = False  # 标记连接断开
+            read_error_count += 1
+            # 只在连续多次错误后才打印
+            if read_error_count >= 5:
+                print(f"串口读取错误: {e}")
+                read_error_count = 0
+                serial_connected = False  # 标记连接断开
             time.sleep(0.5)
 
 @app.route('/')
@@ -195,12 +231,12 @@ def set_frequency(interval):
     """设置数据发送频率（秒）"""
     global data_send_interval
     
-    # 限制范围在0.1到5秒之间
-    if 0.1 <= interval <= 5.0:
+    # 扩大范围到10秒
+    if 0.5 <= interval <= 10.0:
         data_send_interval = interval
         return {"status": "成功", "interval": interval}
     else:
-        return {"status": "失败", "message": "频率必须在0.1到5秒之间"}, 400
+        return {"status": "失败", "message": "频率必须在0.5到10秒之间"}, 400
 
 
 if __name__ == '__main__':
