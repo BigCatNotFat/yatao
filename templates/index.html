@@ -391,15 +391,40 @@
             }
         });
 
-        // 连接到后端的 WebSocket 服务 - 修改连接配置，允许兼容polling模式
+        // 修改Socket.IO连接配置，尝试解决连接问题
         const socket = io({
-            // 允许先polling后websocket的传输顺序，保持与后端默认配置兼容
+            // 允许先polling后websocket的传输顺序
             transports: ['polling', 'websocket'],
             reconnection: true,
             reconnectionAttempts: Infinity,
             reconnectionDelay: 1000,
             reconnectionDelayMax: 5000,
-            timeout: 20000
+            timeout: 20000,
+            // 添加额外的配置
+            forceNew: true,             // 强制创建新连接
+            multiplex: false           // 禁用多路复用
+        });
+        
+        // 添加Socket.IO调试日志
+        socket.onAny((event, ...args) => {
+            console.log('收到任何事件:', event, args);
+        });
+        
+        // 监听所有Socket.IO内部事件
+        socket.io.on("error", (error) => {
+            console.error('Socket.IO错误:', error);
+        });
+        
+        socket.io.on("reconnect_attempt", (attempt) => {
+            console.log('尝试重连, 次数:', attempt);
+        });
+        
+        socket.io.on("reconnect_error", (error) => {
+            console.error('重连错误:', error);
+        });
+        
+        socket.io.on("reconnect_failed", () => {
+            console.error('重连失败');
         });
 
         // 向控制台添加更多调试信息
@@ -410,20 +435,130 @@
             
             // 临时发送一个测试消息来检查连接
             socket.emit('test_connection', {message: '测试连接'});
-        });
-
-        socket.on('connect_error', (error) => {
-            connectionStatus.textContent = '连接错误';
-            connectionStatus.style.color = 'red';
-            console.error('连接错误:', error);
-        });
-
-        socket.on('disconnect', (reason) => {
-            connectionStatus.textContent = '已断开: ' + reason;
-            connectionStatus.style.color = 'orange';
-            console.log('断开连接:', reason);
+            
+            // 尝试手动触发一个请求查询数据
+            setTimeout(() => {
+                console.log('尝试请求数据');
+                socket.emit('request_data');
+            }, 1000);
         });
         
+        // 为兼容性添加直接监听message事件
+        socket.on('message', (data) => {
+            console.log('收到通用message事件:', data);
+            // 尝试将通用消息作为数据处理
+            if (data && data.values && Array.isArray(data.values)) {
+                updateCircles(data.values);
+                frameCount++;
+            }
+        });
+
+        // 具体事件监听
+        socket.on('update_colors', (data) => {
+            console.log('收到update_colors事件:', data);
+            if (!data || !data.values) {
+                console.error('数据格式错误:', data);
+                return;
+            }
+            
+            const values = data.values;
+            frameCount++;
+            updateCircles(values);
+        });
+        
+        // 添加一个简单的心跳检测
+        let heartbeatInterval = setInterval(() => {
+            if (socket.connected) {
+                socket.emit('heartbeat', { time: Date.now() });
+            }
+        }, 10000);
+        
+        // 定期检测连接状态并尝试重连
+        setInterval(() => {
+            if (!socket.connected) {
+                connectionStatus.textContent = '尝试重连...';
+                connectionStatus.style.color = 'blue';
+                socket.connect();
+            } else {
+                // 输出当前传输模式
+                console.log('当前传输模式:', socket.io.engine.transport.name);
+            }
+        }, 5000);
+        
+        // 添加调试按钮功能
+        document.getElementById('reconnect').addEventListener('dblclick', function() {
+            console.log('强制尝试新连接');
+            socket.disconnect();
+            
+            // 完全重新创建socket连接
+            setTimeout(() => {
+                try {
+                    // 尝试使用原始简单方式连接
+                    const newSocket = io();
+                    console.log('使用默认配置创建新连接');
+                    
+                    // 设置基本事件监听
+                    newSocket.on('connect', () => {
+                        console.log('新连接成功');
+                        // 替换全局socket对象
+                        socket = newSocket;
+                    });
+                    
+                    newSocket.on('update_colors', (data) => {
+                        console.log('新连接收到数据:', data);
+                        updateCircles(data.values);
+                    });
+                } catch (e) {
+                    console.error('创建新连接失败:', e);
+                    socket.connect(); // 失败则使用原连接
+                }
+            }, 1000);
+        });
+        
+        // 添加直接轮询测试功能
+        let pollingEnabled = false;
+        const pollingButton = document.createElement('button');
+        pollingButton.textContent = '启用HTTP轮询';
+        pollingButton.style.margin = '5px';
+        pollingButton.onclick = function() {
+            pollingEnabled = !pollingEnabled;
+            this.textContent = pollingEnabled ? '停止HTTP轮询' : '启用HTTP轮询';
+            
+            if (pollingEnabled) {
+                // 开始HTTP轮询
+                console.log('开始HTTP轮询');
+                pollData();
+            }
+        };
+        document.querySelector('.control-panel').appendChild(pollingButton);
+        
+        // HTTP轮询函数
+        function pollData() {
+            if (!pollingEnabled) return;
+            
+            fetch('/api/data')
+                .then(response => {
+                    if (!response.ok) throw new Error('HTTP请求失败');
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('HTTP轮询获取数据:', data);
+                    if (data && data.values) {
+                        updateCircles(data.values);
+                        frameCount++;
+                    }
+                })
+                .catch(error => {
+                    console.error('HTTP轮询错误:', error);
+                })
+                .finally(() => {
+                    // 继续轮询
+                    if (pollingEnabled) {
+                        setTimeout(pollData, 2000);
+                    }
+                });
+        }
+
         // 数据处理函数：检查数据变化是否显著
         function hasSignificantChange(oldData, newData) {
             if (!oldData || !newData) return true;
@@ -511,51 +646,6 @@
                 arrow.style.transform = `translate(-50%, -100%) rotate(${angle}deg)`;
             }
         }
-
-        // 监听 "update_colors" 事件
-        socket.on('update_colors', (data) => {
-            console.log('收到数据:', data);  // 添加日志确认数据接收
-            const values = data.values; // 假设这是长度为64的数组
-            
-            // 增加数据接收计数
-            frameCount++;
-            
-            // 使用节流函数更新UI
-            updateCircles(values);
-        });
-
-        // 定期检测连接状态并尝试重连
-        setInterval(() => {
-            if (!socket.connected) {
-                connectionStatus.textContent = '尝试重连...';
-                connectionStatus.style.color = 'blue';
-                socket.connect();
-            } else {
-                // 输出当前传输模式
-                console.log('当前传输模式:', socket.io.engine.transport.name);
-            }
-        }, 5000);
-        
-        // 初始化显示
-        updateIntervalDisplay.textContent = updateInterval;
-        
-        // 添加调试按钮功能
-        document.getElementById('reconnect').addEventListener('dblclick', function() {
-            // 双击重置按钮时尝试切换传输模式
-            if (socket.io.engine.transport.name === 'polling') {
-                console.log('尝试强制使用websocket模式');
-                socket.io.engine.transport.once('open', () => {
-                    socket.io.engine.transport.name = 'websocket';
-                });
-            } else {
-                console.log('尝试强制使用polling模式');
-                socket.io.engine.transport.once('open', () => {
-                    socket.io.engine.transport.name = 'polling';
-                });
-            }
-            socket.disconnect();
-            setTimeout(() => socket.connect(), 500);
-        });
     </script>
 </body>
 </html>
