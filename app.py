@@ -141,6 +141,8 @@ def serial_listener():
                     if points:  # 如果解析成功
                         # 推送数据到前端
                         socketio.emit('update_colors', {'values': points})
+                        # 打印接收到的数据
+                        print(f"Updated U-shape grid with values: {points}")
             
             # 保持原始延迟
             time.sleep(0.1)
