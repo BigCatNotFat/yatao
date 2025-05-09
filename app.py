@@ -1,12 +1,12 @@
+# 首先导入eventlet并执行monkey_patch
+import eventlet
+eventlet.monkey_patch()
+
+# 然后导入其他模块
 from flask import Flask, render_template
 from flask_socketio import SocketIO, emit
-import threading
 import serial
 import time
-import eventlet
-
-# 使用eventlet替代标准线程库
-eventlet.monkey_patch()
 
 app = Flask(__name__)
 # 优化SocketIO配置
