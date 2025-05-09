@@ -391,9 +391,10 @@
             }
         });
 
-        // 连接到后端的 WebSocket 服务
+        // 连接到后端的 WebSocket 服务 - 修改连接配置，允许兼容polling模式
         const socket = io({
-            transports: ['websocket'],
+            // 允许先polling后websocket的传输顺序，保持与后端默认配置兼容
+            transports: ['polling', 'websocket'],
             reconnection: true,
             reconnectionAttempts: Infinity,
             reconnectionDelay: 1000,
@@ -401,11 +402,14 @@
             timeout: 20000
         });
 
-        // 添加连接状态监听
+        // 向控制台添加更多调试信息
         socket.on('connect', () => {
             connectionStatus.textContent = '已连接';
             connectionStatus.style.color = 'green';
-            console.log('已连接到服务器');
+            console.log('已连接到服务器, ID:', socket.id, '传输模式:', socket.io.engine.transport.name);
+            
+            // 临时发送一个测试消息来检查连接
+            socket.emit('test_connection', {message: '测试连接'});
         });
 
         socket.on('connect_error', (error) => {
@@ -510,6 +514,7 @@
 
         // 监听 "update_colors" 事件
         socket.on('update_colors', (data) => {
+            console.log('收到数据:', data);  // 添加日志确认数据接收
             const values = data.values; // 假设这是长度为64的数组
             
             // 增加数据接收计数
@@ -525,11 +530,32 @@
                 connectionStatus.textContent = '尝试重连...';
                 connectionStatus.style.color = 'blue';
                 socket.connect();
+            } else {
+                // 输出当前传输模式
+                console.log('当前传输模式:', socket.io.engine.transport.name);
             }
         }, 5000);
         
         // 初始化显示
         updateIntervalDisplay.textContent = updateInterval;
+        
+        // 添加调试按钮功能
+        document.getElementById('reconnect').addEventListener('dblclick', function() {
+            // 双击重置按钮时尝试切换传输模式
+            if (socket.io.engine.transport.name === 'polling') {
+                console.log('尝试强制使用websocket模式');
+                socket.io.engine.transport.once('open', () => {
+                    socket.io.engine.transport.name = 'websocket';
+                });
+            } else {
+                console.log('尝试强制使用polling模式');
+                socket.io.engine.transport.once('open', () => {
+                    socket.io.engine.transport.name = 'polling';
+                });
+            }
+            socket.disconnect();
+            setTimeout(() => socket.connect(), 500);
+        });
     </script>
 </body>
 </html>
