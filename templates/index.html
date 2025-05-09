@@ -84,9 +84,30 @@
             border-right: 5px solid transparent;
             border-bottom: 7px solid red; /* 箭头颜色 */
         }
+        
+        /* 新增状态指示器样式 */
+        .status {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            padding: 5px 10px;
+            background-color: #f0f0f0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            z-index: 1000;
+        }
     </style>
 </head>
 <body>
+    <!-- 添加状态指示器 -->
+    <div class="status" id="status">
+        <div>连接状态: <span id="connection-status">未连接</span></div>
+        <div>数据接收: <span id="data-rate">0</span> 帧/秒</div>
+        <div>上次接收: <span id="last-received">-</span></div>
+    </div>
+
     <div class="container" id="container">
         <!-- 16个圆形元素，每个包含四个象限和一个箭头 -->
         <!-- 以下是从circle-1到circle-16的完整列表 -->
@@ -250,14 +271,63 @@
             circle.style.top = `${y - 20}px`;  // 圆心Y坐标 - 圆形半径
         });
 
-        // 连接到后端的 WebSocket 服务
-        const socket = io();
+        // 获取状态元素
+        const connectionStatus = document.getElementById('connection-status');
+        const dataRate = document.getElementById('data-rate');
+        const lastReceived = document.getElementById('last-received');
+
+        // 数据接收计数器
+        let frameCount = 0;
+        let lastSecond = Date.now();
+
+        // 每秒更新数据接收速率
+        setInterval(() => {
+            const now = Date.now();
+            const elapsed = (now - lastSecond) / 1000;
+            const rate = Math.round(frameCount / elapsed);
+            
+            dataRate.textContent = rate;
+            frameCount = 0;
+            lastSecond = now;
+        }, 1000);
+
+        // 连接到后端的 WebSocket 服务，强制使用websocket模式
+        const socket = io({
+            transports: ['websocket'],
+            reconnection: true,
+            reconnectionAttempts: Infinity,
+            reconnectionDelay: 1000,
+            reconnectionDelayMax: 5000,
+            timeout: 20000
+        });
+
+        // 添加连接状态监听
+        socket.on('connect', () => {
+            connectionStatus.textContent = '已连接';
+            connectionStatus.style.color = 'green';
+            console.log('已连接到服务器');
+        });
+
+        socket.on('connect_error', (error) => {
+            connectionStatus.textContent = '连接错误';
+            connectionStatus.style.color = 'red';
+            console.error('连接错误:', error);
+        });
+
+        socket.on('disconnect', (reason) => {
+            connectionStatus.textContent = '已断开: ' + reason;
+            connectionStatus.style.color = 'orange';
+            console.log('断开连接:', reason);
+        });
 
         // 监听 "update_colors" 事件
         socket.on('update_colors', (data) => {
             const values = data.values; // 假设这是长度为64的数组
-            console.log('Received values:', values);
-
+            
+            // 更新接收计数和时间
+            frameCount++;
+            lastReceived.textContent = new Date().toLocaleTimeString();
+            
             for (let i = 0; i < totalCircles; i++) {
                 const circleValues = values.slice(i * 4, i * 4 + 4); // 获取当前圆的4个象限值
                 let maxIndex = 0;
@@ -285,16 +355,14 @@
             }
         });
 
-        // 如果没有后端服务，可以使用以下代码模拟数据更新
-        /*
+        // 定期检测连接状态并尝试重连
         setInterval(() => {
-            const values = [];
-            for (let i = 0; i < 64; i++) {
-                values.push(Math.floor(Math.random() * 256)); // 随机生成0-255的整数
+            if (!socket.connected) {
+                connectionStatus.textContent = '尝试重连...';
+                connectionStatus.style.color = 'blue';
+                socket.connect();
             }
-            socket.emit('update_colors', { values });
-        }, 1000);
-        */
+        }, 5000);
     </script>
 </body>
 </html>
