@@ -33,7 +33,7 @@ def parse_data_frame(data: bytes):
         raw = high * 256 + low          # 0-65535
         norm = raw / 65535              # 0-1
         val = int(255 * (norm ** gamma))
-        points.append(val)              # 不再 *10，避免溢出
+        points.append(val*5)              # 不再 *10，避免溢出
 
     return points
 
