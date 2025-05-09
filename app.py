@@ -21,6 +21,10 @@ ser = None
 serial_connected = False
 last_reconnect_time = 0
 
+# 控制数据发送频率的变量
+last_data_send_time = 0
+data_send_interval = 0.5  # 500毫秒发送一次
+
 # 数据发送控制
 last_sent_data = None
 send_counter = 0
@@ -119,7 +123,10 @@ def serial_listener():
     """
     持续监听串口，解析数据并通过 Socket.IO 推送到前端。
     """
-    global ser, serial_connected, last_reconnect_time
+    global ser, serial_connected, last_reconnect_time, last_data_send_time
+    
+    # 最后一次成功解析的数据帧
+    last_points = None
     
     while True:
         # 检查串口连接状态，如果断开则尝试重连
@@ -139,10 +146,17 @@ def serial_listener():
                 if len(data) == 516:  # 验证数据帧长度
                     points = parse_data_frame(data)
                     if points:  # 如果解析成功
-                        # 推送数据到前端
-                        socketio.emit('update_colors', {'values': points})
-                        # 打印接收到的数据
-                        print(f"Updated U-shape grid with values: {points}")
+                        # 更新最新数据
+                        last_points = points
+                        
+                        # 检查是否应该发送数据
+                        current_time = time.time()
+                        if current_time - last_data_send_time >= data_send_interval:
+                            # 推送数据到前端
+                            socketio.emit('update_colors', {'values': points})
+                            # 打印接收到的数据
+                            print(f"Updated U-shape grid with values: {points}")
+                            last_data_send_time = current_time
             
             # 保持原始延迟
             time.sleep(0.1)
@@ -173,6 +187,20 @@ def reset_serial():
     global serial_connected
     serial_connected = False
     return {"status": "重置中", "success": True}
+
+
+# 添加频率调整端点
+@app.route('/api/set_frequency/<float:interval>')
+def set_frequency(interval):
+    """设置数据发送频率（秒）"""
+    global data_send_interval
+    
+    # 限制范围在0.1到5秒之间
+    if 0.1 <= interval <= 5.0:
+        data_send_interval = interval
+        return {"status": "成功", "interval": interval}
+    else:
+        return {"status": "失败", "message": "频率必须在0.1到5秒之间"}, 400
 
 
 if __name__ == '__main__':
