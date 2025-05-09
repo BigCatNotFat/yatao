@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>U-Shaped Curve Layout with Dynamic Colors and Arrows</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f4f4f4;
+        }
+
+        .container {
+            position: relative;
+            width: 500px; /* 容器宽度 */
+            height: 300px; /* 容器高度 */
+            background-color: transparent; /* 背景透明 */
+        }
+
+        .circle {
+            position: absolute;
+            width: 40px; /* 圆形的宽度 */
+            border: 1px solid #000;
+            height: 40px; /* 圆形的高度 */
+            border-radius: 50%; /* 圆形样式 */
+            overflow: hidden; /* 使象限超出部分被裁剪 */
+        }
+
+        .quadrant {
+            position: absolute;
+            width: 50%;
+            height: 50%;
+        }
+
+        .quadrant-1 {
+            top: 0;
+            left: 0;
+            border-right: 1px solid #000;
+            border-bottom: 1px solid #000;
+        }
+
+        .quadrant-2 {
+            top: 0;
+            left: 50%;
+            border-left: 1px solid #000;
+            border-bottom: 1px solid #000;
+        }
+
+        .quadrant-3 {
+            top: 50%;
+            left: 0;
+            border-right: 1px solid #000;
+            border-top: 1px solid #000;
+        }
+
+        .quadrant-4 {
+            top: 50%;
+            left: 50%;
+            border-left: 1px solid #000;
+            border-top: 1px solid #000;
+        }
+
+        .arrow {
+            position: absolute;
+            width: 2px; /* 箭头杆的宽度 */
+            height: 15px; /* 箭头杆的长度 */
+            background-color: red; /* 箭头颜色 */
+            left: 50%;
+            top: 50%;
+            transform-origin: bottom center;
+            transform: translate(-50%, -100%) rotate(0deg);
+        }
+
+        .arrow::after {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 0;
+            transform: translate(-50%, -50%);
+            border-left: 5px solid transparent;
+            border-right: 5px solid transparent;
+            border-bottom: 7px solid red; /* 箭头颜色 */
+        }
+    </style>
+</head>
+<body>
+    <div class="container" id="container">
+        <!-- 16个圆形元素，每个包含四个象限和一个箭头 -->
+        <!-- 以下是从circle-1到circle-16的完整列表 -->
+
+        <!-- Circle 1 -->
+        <div class="circle" id="circle-1">
+            <div class="quadrant quadrant-1" id="circle-1-quadrant-1"></div>
+            <div class="quadrant quadrant-2" id="circle-1-quadrant-2"></div>
+            <div class="quadrant quadrant-3" id="circle-1-quadrant-3"></div>
+            <div class="quadrant quadrant-4" id="circle-1-quadrant-4"></div>
+            <div class="arrow" id="circle-1-arrow"></div>
+        </div>
+        <!-- Circle 2 -->
+        <div class="circle" id="circle-2">
+            <div class="quadrant quadrant-1" id="circle-2-quadrant-1"></div>
+            <div class="quadrant quadrant-2" id="circle-2-quadrant-2"></div>
+            <div class="quadrant quadrant-3" id="circle-2-quadrant-3"></div>
+            <div class="quadrant quadrant-4" id="circle-2-quadrant-4"></div>
+            <div class="arrow" id="circle-2-arrow"></div>
+        </div>
+        <!-- Circle 3 -->
+        <div class="circle" id="circle-3">
+            <div class="quadrant quadrant-1" id="circle-3-quadrant-1"></div>
+            <div class="quadrant quadrant-2" id="circle-3-quadrant-2"></div>
+            <div class="quadrant quadrant-3" id="circle-3-quadrant-3"></div>
+            <div class="quadrant quadrant-4" id="circle-3-quadrant-4"></div>
+            <div class="arrow" id="circle-3-arrow"></div>
+        </div>
+        <!-- Circle 4 -->
+        <div class="circle" id="circle-4">
+            <div class="quadrant quadrant-1" id="circle-4-quadrant-1"></div>
+            <div class="quadrant quadrant-2" id="circle-4-quadrant-2"></div>
+            <div class="quadrant quadrant-3" id="circle-4-quadrant-3"></div>
+            <div class="quadrant quadrant-4" id="circle-4-quadrant-4"></div>
+            <div class="arrow" id="circle-4-arrow"></div>
+        </div>
+        <!-- Circle 5 -->
+        <div class="circle" id="circle-5">
+            <div class="quadrant quadrant-1" id="circle-5-quadrant-1"></div>
+            <div class="quadrant quadrant-2" id="circle-5-quadrant-2"></div>
+            <div class="quadrant quadrant-3" id="circle-5-quadrant-3"></div>
+            <div class="quadrant quadrant-4" id="circle-5-quadrant-4"></div>
+            <div class="arrow" id="circle-5-arrow"></div>
+        </div>
+        <!-- Circle 6 -->
+        <div class="circle" id="circle-6">
+            <div class="quadrant quadrant-1" id="circle-6-quadrant-1"></div>
+            <div class="quadrant quadrant-2" id="circle-6-quadrant-2"></div>
+            <div class="quadrant quadrant-3" id="circle-6-quadrant-3"></div>
+            <div class="quadrant quadrant-4" id="circle-6-quadrant-4"></div>
+            <div class="arrow" id="circle-6-arrow"></div>
+        </div>
+        <!-- Circle 7 -->
+        <div class="circle" id="circle-7">
+            <div class="quadrant quadrant-1" id="circle-7-quadrant-1"></div>
+            <div class="quadrant quadrant-2" id="circle-7-quadrant-2"></div>
+            <div class="quadrant quadrant-3" id="circle-7-quadrant-3"></div>
+            <div class="quadrant quadrant-4" id="circle-7-quadrant-4"></div>
+            <div class="arrow" id="circle-7-arrow"></div>
+        </div>
+        <!-- Circle 8 -->
+        <div class="circle" id="circle-8">
+            <div class="quadrant quadrant-1" id="circle-8-quadrant-1"></div>
+            <div class="quadrant quadrant-2" id="circle-8-quadrant-2"></div>
+            <div class="quadrant quadrant-3" id="circle-8-quadrant-3"></div>
+            <div class="quadrant quadrant-4" id="circle-8-quadrant-4"></div>
+            <div class="arrow" id="circle-8-arrow"></div>
+        </div>
+        <!-- Circle 9 -->
+        <div class="circle" id="circle-9">
+            <div class="quadrant quadrant-1" id="circle-9-quadrant-1"></div>
+            <div class="quadrant quadrant-2" id="circle-9-quadrant-2"></div>
+            <div class="quadrant quadrant-3" id="circle-9-quadrant-3"></div>
+            <div class="quadrant quadrant-4" id="circle-9-quadrant-4"></div>
+            <div class="arrow" id="circle-9-arrow"></div>
+        </div>
+        <!-- Circle 10 -->
+        <div class="circle" id="circle-10">
+            <div class="quadrant quadrant-1" id="circle-10-quadrant-1"></div>
+            <div class="quadrant quadrant-2" id="circle-10-quadrant-2"></div>
+            <div class="quadrant quadrant-3" id="circle-10-quadrant-3"></div>
+            <div class="quadrant quadrant-4" id="circle-10-quadrant-4"></div>
+            <div class="arrow" id="circle-10-arrow"></div>
+        </div>
+        <!-- Circle 11 -->
+        <div class="circle" id="circle-11">
+            <div class="quadrant quadrant-1" id="circle-11-quadrant-1"></div>
+            <div class="quadrant quadrant-2" id="circle-11-quadrant-2"></div>
+            <div class="quadrant quadrant-3" id="circle-11-quadrant-3"></div>
+            <div class="quadrant quadrant-4" id="circle-11-quadrant-4"></div>
+            <div class="arrow" id="circle-11-arrow"></div>
+        </div>
+        <!-- Circle 12 -->
+        <div class="circle" id="circle-12">
+            <div class="quadrant quadrant-1" id="circle-12-quadrant-1"></div>
+            <div class="quadrant quadrant-2" id="circle-12-quadrant-2"></div>
+            <div class="quadrant quadrant-3" id="circle-12-quadrant-3"></div>
+            <div class="quadrant quadrant-4" id="circle-12-quadrant-4"></div>
+            <div class="arrow" id="circle-12-arrow"></div>
+        </div>
+        <!-- Circle 13 -->
+        <div class="circle" id="circle-13">
+            <div class="quadrant quadrant-1" id="circle-13-quadrant-1"></div>
+            <div class="quadrant quadrant-2" id="circle-13-quadrant-2"></div>
+            <div class="quadrant quadrant-3" id="circle-13-quadrant-3"></div>
+            <div class="quadrant quadrant-4" id="circle-13-quadrant-4"></div>
+            <div class="arrow" id="circle-13-arrow"></div>
+        </div>
+        <!-- Circle 14 -->
+        <div class="circle" id="circle-14">
+            <div class="quadrant quadrant-1" id="circle-14-quadrant-1"></div>
+            <div class="quadrant quadrant-2" id="circle-14-quadrant-2"></div>
+            <div class="quadrant quadrant-3" id="circle-14-quadrant-3"></div>
+            <div class="quadrant quadrant-4" id="circle-14-quadrant-4"></div>
+            <div class="arrow" id="circle-14-arrow"></div>
+        </div>
+        <!-- Circle 15 -->
+        <div class="circle" id="circle-15">
+            <div class="quadrant quadrant-1" id="circle-15-quadrant-1"></div>
+            <div class="quadrant quadrant-2" id="circle-15-quadrant-2"></div>
+            <div class="quadrant quadrant-3" id="circle-15-quadrant-3"></div>
+            <div class="quadrant quadrant-4" id="circle-15-quadrant-4"></div>
+            <div class="arrow" id="circle-15-arrow"></div>
+        </div>
+        <!-- Circle 16 -->
+        <div class="circle" id="circle-16">
+            <div class="quadrant quadrant-1" id="circle-16-quadrant-1"></div>
+            <div class="quadrant quadrant-2" id="circle-16-quadrant-2"></div>
+            <div class="quadrant quadrant-3" id="circle-16-quadrant-3"></div>
+            <div class="quadrant quadrant-4" id="circle-16-quadrant-4"></div>
+            <div class="arrow" id="circle-16-arrow"></div>
+        </div>
+    </div>
+
+    <!-- 引入 Socket.IO 客户端库 -->
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+    <script>
+        // 获取容器的宽高
+        const container = document.getElementById("container");
+        const containerWidth = container.offsetWidth;
+        const containerHeight = container.offsetHeight;
+
+        // 设置曲线参数
+        const centerX = containerWidth / 2; // U型曲线的中心点X坐标
+        const centerY = containerHeight * 0.8; // U型曲线的中心点Y坐标
+        const radiusX = containerWidth / 2.5; // 水平半径
+        const radiusY = containerHeight / 1.5;  // 垂直半径
+
+        // 获取所有圆形元素
+        const circles = document.querySelectorAll(".circle");
+        const totalCircles = circles.length;
+
+        // 使用正弦曲线将圆形分布在U形上
+        circles.forEach((circle, index) => {
+            const angle = Math.PI - (Math.PI / (totalCircles - 1)) * index; // 计算当前点的角度
+            const x = centerX + radiusX * Math.cos(angle); // x坐标
+            const y = centerY - radiusY * Math.sin(angle); // y坐标
+
+            // 设置圆形的位置
+            circle.style.left = `${x - 20}px`; // 圆心X坐标 - 圆形半径
+            circle.style.top = `${y - 20}px`;  // 圆心Y坐标 - 圆形半径
+        });
+
+        // 连接到后端的 WebSocket 服务
+        const socket = io();
+
+        // 监听 "update_colors" 事件
+        socket.on('update_colors', (data) => {
+            const values = data.values; // 假设这是长度为64的数组
+            console.log('Received values:', values);
+
+            for (let i = 0; i < totalCircles; i++) {
+                const circleValues = values.slice(i * 4, i * 4 + 4); // 获取当前圆的4个象限值
+                let maxIndex = 0;
+                let maxValue = circleValues[0];
+
+                // 更新每个象限的背景颜色，并找到最大值的象限
+                for (let j = 0; j < 4; j++) {
+                    const quadrantValue = circleValues[j];
+                    const quadrant = document.querySelector(`#circle-${i + 1} .quadrant-${j + 1}`);
+                    const intensity = quadrantValue; // 假设值在0-255之间
+                    quadrant.style.backgroundColor = `rgb(${intensity}, ${intensity}, ${intensity})`;
+
+                    if (quadrantValue > maxValue) {
+                        maxValue = quadrantValue;
+                        maxIndex = j; // 记录最大值的象限索引
+                    }
+                }
+
+                // 更新箭头方向
+                const arrow = document.getElementById(`circle-${i + 1}-arrow`);
+                const angleMap = [315, 45, 225, 135];
+
+                const angle = angleMap[maxIndex];
+                arrow.style.transform = `translate(-50%, -100%) rotate(${angle}deg)`;
+            }
+        });
+
+        // 如果没有后端服务，可以使用以下代码模拟数据更新
+        /*
+        setInterval(() => {
+            const values = [];
+            for (let i = 0; i < 64; i++) {
+                values.push(Math.floor(Math.random() * 256)); // 随机生成0-255的整数
+            }
+            socket.emit('update_colors', { values });
+        }, 1000);
+        */
+    </script>
+</body>
+</html>
+
