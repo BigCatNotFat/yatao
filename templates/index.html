@@ -84,9 +84,80 @@
             border-right: 5px solid transparent;
             border-bottom: 7px solid red; /* 箭头颜色 */
         }
+        
+        /* 状态指示器样式 */
+        .status {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            padding: 5px 10px;
+            background-color: #f0f0f0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            z-index: 1000;
+        }
+        
+        /* 添加控制面板 */
+        .control-panel {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            padding: 10px;
+            background-color: rgba(255, 255, 255, 0.8);
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            z-index: 1000;
+        }
+        
+        .control-panel button {
+            margin: 5px;
+            padding: 5px 10px;
+        }
+        
+        .control-panel label {
+            display: block;
+            margin: 5px 0;
+        }
     </style>
 </head>
 <body>
+    <!-- 状态指示器 -->
+    <div class="status" id="status">
+        <div>连接状态: <span id="connection-status">未连接</span></div>
+        <div>数据接收: <span id="data-rate">0</span> 帧/秒</div>
+        <div>上次接收: <span id="last-received">-</span></div>
+        <div>更新间隔: <span id="update-interval">2000</span> 毫秒</div>
+    </div>
+    
+    <!-- 控制面板 -->
+    <div class="control-panel">
+        <h3>控制面板</h3>
+        <label>
+            更新频率:
+            <select id="update-frequency">
+                <option value="500">0.5秒</option>
+                <option value="1000">1秒</option>
+                <option value="2000" selected>2秒</option>
+                <option value="3000">3秒</option>
+                <option value="5000">5秒</option>
+                <option value="10000">10秒</option>
+            </select>
+        </label>
+        <label>
+            变化阈值:
+            <input type="range" id="change-threshold" min="0" max="50" value="20" step="5">
+            <span id="threshold-value">20%</span>
+        </label>
+        <label>
+            <input type="checkbox" id="enable-averaging" checked>
+            启用数据平滑
+        </label>
+        <button id="pause-updates">暂停更新</button>
+        <button id="reconnect">重新连接</button>
+    </div>
+
     <div class="container" id="container">
         <!-- 16个圆形元素，每个包含四个象限和一个箭头 -->
         <!-- 以下是从circle-1到circle-16的完整列表 -->
@@ -250,16 +321,169 @@
             circle.style.top = `${y - 20}px`;  // 圆心Y坐标 - 圆形半径
         });
 
+        // 获取状态和控制元素
+        const connectionStatus = document.getElementById('connection-status');
+        const dataRate = document.getElementById('data-rate');
+        const lastReceived = document.getElementById('last-received');
+        const updateIntervalDisplay = document.getElementById('update-interval');
+        const updateFrequencySelect = document.getElementById('update-frequency');
+        const changeThresholdInput = document.getElementById('change-threshold');
+        const thresholdValueDisplay = document.getElementById('threshold-value');
+        const enableAveragingCheckbox = document.getElementById('enable-averaging');
+        const pauseUpdatesButton = document.getElementById('pause-updates');
+        const reconnectButton = document.getElementById('reconnect');
+
+        // 数据处理设置
+        let updateInterval = parseInt(updateFrequencySelect.value); // 更新间隔（毫秒）
+        let changeThreshold = parseInt(changeThresholdInput.value); // 变化阈值（百分比）
+        let enableAveraging = enableAveragingCheckbox.checked; // 是否启用数据平滑
+        let updatesPaused = false; // 是否暂停更新
+        
+        // 数据缓存和统计
+        let lastUpdateTime = 0; // 上次更新时间
+        let lastDisplayedData = null; // 上次显示的数据
+        let dataQueue = []; // 数据队列，用于平滑处理
+        let maxQueueLength = 3; // 队列最大长度
+        
+        // 数据接收计数器
+        let frameCount = 0;
+        let lastSecond = Date.now();
+        
+        // 每秒更新数据接收速率
+        setInterval(() => {
+            const now = Date.now();
+            const elapsed = (now - lastSecond) / 1000;
+            const rate = Math.round(frameCount / elapsed);
+            
+            dataRate.textContent = rate;
+            frameCount = 0;
+            lastSecond = now;
+        }, 1000);
+        
+        // 绑定控制面板事件
+        updateFrequencySelect.addEventListener('change', function() {
+            updateInterval = parseInt(this.value);
+            updateIntervalDisplay.textContent = updateInterval;
+        });
+        
+        changeThresholdInput.addEventListener('input', function() {
+            changeThreshold = parseInt(this.value);
+            thresholdValueDisplay.textContent = changeThreshold + "%";
+        });
+        
+        enableAveragingCheckbox.addEventListener('change', function() {
+            enableAveraging = this.checked;
+            // 清空数据队列
+            dataQueue = [];
+        });
+        
+        pauseUpdatesButton.addEventListener('click', function() {
+            updatesPaused = !updatesPaused;
+            this.textContent = updatesPaused ? "恢复更新" : "暂停更新";
+        });
+        
+        reconnectButton.addEventListener('click', function() {
+            if (socket.connected) {
+                socket.disconnect();
+                setTimeout(() => socket.connect(), 500);
+            } else {
+                socket.connect();
+            }
+        });
+
         // 连接到后端的 WebSocket 服务
-        const socket = io();
+        const socket = io({
+            transports: ['websocket'],
+            reconnection: true,
+            reconnectionAttempts: Infinity,
+            reconnectionDelay: 1000,
+            reconnectionDelayMax: 5000,
+            timeout: 20000
+        });
 
-        // 监听 "update_colors" 事件
-        socket.on('update_colors', (data) => {
-            const values = data.values; // 假设这是长度为64的数组
-            console.log('Received values:', values);
+        // 添加连接状态监听
+        socket.on('connect', () => {
+            connectionStatus.textContent = '已连接';
+            connectionStatus.style.color = 'green';
+            console.log('已连接到服务器');
+        });
 
+        socket.on('connect_error', (error) => {
+            connectionStatus.textContent = '连接错误';
+            connectionStatus.style.color = 'red';
+            console.error('连接错误:', error);
+        });
+
+        socket.on('disconnect', (reason) => {
+            connectionStatus.textContent = '已断开: ' + reason;
+            connectionStatus.style.color = 'orange';
+            console.log('断开连接:', reason);
+        });
+        
+        // 数据处理函数：检查数据变化是否显著
+        function hasSignificantChange(oldData, newData) {
+            if (!oldData || !newData) return true;
+            
+            const changes = newData.filter((val, idx) => 
+                Math.abs(val - oldData[idx]) > 10
+            ).length;
+            
+            const changePercent = (changes / newData.length) * 100;
+            return changePercent >= changeThreshold;
+        }
+        
+        // 数据平滑处理
+        function smoothData(newData) {
+            if (!enableAveraging) return newData;
+            
+            // 添加新数据到队列
+            dataQueue.push(newData);
+            
+            // 保持队列长度
+            if (dataQueue.length > maxQueueLength) {
+                dataQueue.shift();
+            }
+            
+            // 如果队列中只有一个数据，直接返回
+            if (dataQueue.length === 1) return newData;
+            
+            // 计算平均值
+            const result = new Array(newData.length).fill(0);
+            for (let i = 0; i < newData.length; i++) {
+                let sum = 0;
+                for (let j = 0; j < dataQueue.length; j++) {
+                    sum += dataQueue[j][i];
+                }
+                result[i] = Math.round(sum / dataQueue.length);
+            }
+            
+            return result;
+        }
+
+        // 更新视图的节流函数
+        function updateCircles(values) {
+            // 如果更新被暂停，不处理
+            if (updatesPaused) return;
+            
+            const now = Date.now();
+            
+            // 检查是否应该更新
+            if (now - lastUpdateTime < updateInterval) return;
+            
+            // 应用数据平滑
+            const smoothedValues = smoothData(values);
+            
+            // 检查数据变化
+            if (!hasSignificantChange(lastDisplayedData, smoothedValues)) return;
+            
+            // 更新时间和显示数据
+            lastUpdateTime = now;
+            lastDisplayedData = [...smoothedValues];
+            lastReceived.textContent = new Date().toLocaleTimeString();
+            
+            // 更新UI
             for (let i = 0; i < totalCircles; i++) {
-                const circleValues = values.slice(i * 4, i * 4 + 4); // 获取当前圆的4个象限值
+                const circleValues = smoothedValues.slice(i * 4, i * 4 + 4); // 获取当前圆的4个象限值
                 let maxIndex = 0;
                 let maxValue = circleValues[0];
 
@@ -279,22 +503,33 @@
                 // 更新箭头方向
                 const arrow = document.getElementById(`circle-${i + 1}-arrow`);
                 const angleMap = [315, 45, 225, 135];
-
                 const angle = angleMap[maxIndex];
                 arrow.style.transform = `translate(-50%, -100%) rotate(${angle}deg)`;
             }
+        }
+
+        // 监听 "update_colors" 事件
+        socket.on('update_colors', (data) => {
+            const values = data.values; // 假设这是长度为64的数组
+            
+            // 增加数据接收计数
+            frameCount++;
+            
+            // 使用节流函数更新UI
+            updateCircles(values);
         });
 
-        // 如果没有后端服务，可以使用以下代码模拟数据更新
-        /*
+        // 定期检测连接状态并尝试重连
         setInterval(() => {
-            const values = [];
-            for (let i = 0; i < 64; i++) {
-                values.push(Math.floor(Math.random() * 256)); // 随机生成0-255的整数
+            if (!socket.connected) {
+                connectionStatus.textContent = '尝试重连...';
+                connectionStatus.style.color = 'blue';
+                socket.connect();
             }
-            socket.emit('update_colors', { values });
-        }, 1000);
-        */
+        }, 5000);
+        
+        // 初始化显示
+        updateIntervalDisplay.textContent = updateInterval;
     </script>
 </body>
 </html>
