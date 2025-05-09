@@ -1,74 +1,231 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>U-Shaped Grid – Real-time Display</title>
-<style>
-    body{display:flex;justify-content:center;align-items:center;height:100vh;margin:0;background:#f4f4f4}
-    .container{position:relative;width:500px;height:300px}
-    .circle{position:absolute;width:40px;height:40px;border:1px solid #000;border-radius:50%;overflow:hidden}
-    .quadrant{position:absolute;width:50%;height:50%}
-    .quadrant-1{top:0;left:0;border-right:1px solid #000;border-bottom:1px solid #000}
-    .quadrant-2{top:0;left:50%;border-left:1px solid #000;border-bottom:1px solid #000}
-    .quadrant-3{top:50%;left:0;border-right:1px solid #000;border-top:1px solid #000}
-    .quadrant-4{top:50%;left:50%;border-left:1px solid #000;border-top:1px solid #000}
-    .arrow{position:absolute;width:2px;height:15px;background:red;left:50%;top:50%;transform-origin:bottom center;transform:translate(-50%,-100%) rotate(0deg)}
-    .arrow::after{content:'';position:absolute;left:50%;top:0;transform:translate(-50%,-50%);border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:7px solid red}
-</style>
+    <meta charset="UTF-8">
+    <title>U-Shaped Curve Layout with Dynamic Colors and Arrows</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f4f4f4;
+        }
+        .container {
+            position: relative;
+            width: 500px;
+            height: 300px;
+            background-color: transparent;
+        }
+        .circle {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            border: 1px solid #000;
+            border-radius: 50%;
+            overflow: hidden;
+        }
+        .quadrant {
+            position: absolute;
+            width: 50%;
+            height: 50%;
+        }
+        .quadrant-1 { top:0; left:0;  border-right:1px solid #000; border-bottom:1px solid #000;}
+        .quadrant-2 { top:0; left:50%; border-left:1px solid #000; border-bottom:1px solid #000;}
+        .quadrant-3 { top:50%; left:0; border-right:1px solid #000; border-top:1px solid #000;}
+        .quadrant-4 { top:50%; left:50%; border-left:1px solid #000; border-top:1px solid #000;}
+        .arrow {
+            position: absolute;
+            width: 2px;
+            height: 15px;
+            background-color: red;
+            left: 50%;
+            top: 50%;
+            transform-origin: bottom center;
+            transform: translate(-50%, -100%) rotate(0deg);
+        }
+        .arrow::after {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 0;
+            transform: translate(-50%, -50%);
+            border-left: 5px solid transparent;
+            border-right: 5px solid transparent;
+            border-bottom: 7px solid red;
+        }
+    </style>
 </head>
 <body>
-<div class="container" id="container">
-    <!-- 16 circles × 4 quadrants × 1 arrow -->
-    <!-- 用 JS 循环可简化，但此处保持与原版对应 -->
-    % for n in range(1, 17):
-    <div class="circle" id="circle-{{n}}">
-        % for q in range(1, 5):
-        <div class="quadrant quadrant-{{q}}" id="circle-{{n}}-quadrant-{{q}}"></div>
-        % endfor
-        <div class="arrow" id="circle-{{n}}-arrow"></div>
+    <div class="container" id="container">
+        <!-- 16 circles, each with 4 quadrants and 1 arrow -->
+        <!-- Circle 1 -->
+        <div class="circle" id="circle-1">
+            <div class="quadrant quadrant-1" id="circle-1-quadrant-1"></div>
+            <div class="quadrant quadrant-2" id="circle-1-quadrant-2"></div>
+            <div class="quadrant quadrant-3" id="circle-1-quadrant-3"></div>
+            <div class="quadrant quadrant-4" id="circle-1-quadrant-4"></div>
+            <div class="arrow" id="circle-1-arrow"></div>
+        </div>
+        <!-- Circle 2 -->
+        <div class="circle" id="circle-2">
+            <div class="quadrant quadrant-1" id="circle-2-quadrant-1"></div>
+            <div class="quadrant quadrant-2" id="circle-2-quadrant-2"></div>
+            <div class="quadrant quadrant-3" id="circle-2-quadrant-3"></div>
+            <div class="quadrant quadrant-4" id="circle-2-quadrant-4"></div>
+            <div class="arrow" id="circle-2-arrow"></div>
+        </div>
+        <!-- Circle 3 -->
+        <div class="circle" id="circle-3">
+            <div class="quadrant quadrant-1" id="circle-3-quadrant-1"></div>
+            <div class="quadrant quadrant-2" id="circle-3-quadrant-2"></div>
+            <div class="quadrant quadrant-3" id="circle-3-quadrant-3"></div>
+            <div class="quadrant quadrant-4" id="circle-3-quadrant-4"></div>
+            <div class="arrow" id="circle-3-arrow"></div>
+        </div>
+        <!-- Circle 4 -->
+        <div class="circle" id="circle-4">
+            <div class="quadrant quadrant-1" id="circle-4-quadrant-1"></div>
+            <div class="quadrant quadrant-2" id="circle-4-quadrant-2"></div>
+            <div class="quadrant quadrant-3" id="circle-4-quadrant-3"></div>
+            <div class="quadrant quadrant-4" id="circle-4-quadrant-4"></div>
+            <div class="arrow" id="circle-4-arrow"></div>
+        </div>
+        <!-- Circle 5 -->
+        <div class="circle" id="circle-5">
+            <div class="quadrant quadrant-1" id="circle-5-quadrant-1"></div>
+            <div class="quadrant quadrant-2" id="circle-5-quadrant-2"></div>
+            <div class="quadrant quadrant-3" id="circle-5-quadrant-3"></div>
+            <div class="quadrant quadrant-4" id="circle-5-quadrant-4"></div>
+            <div class="arrow" id="circle-5-arrow"></div>
+        </div>
+        <!-- Circle 6 -->
+        <div class="circle" id="circle-6">
+            <div class="quadrant quadrant-1" id="circle-6-quadrant-1"></div>
+            <div class="quadrant quadrant-2" id="circle-6-quadrant-2"></div>
+            <div class="quadrant quadrant-3" id="circle-6-quadrant-3"></div>
+            <div class="quadrant quadrant-4" id="circle-6-quadrant-4"></div>
+            <div class="arrow" id="circle-6-arrow"></div>
+        </div>
+        <!-- Circle 7 -->
+        <div class="circle" id="circle-7">
+            <div class="quadrant quadrant-1" id="circle-7-quadrant-1"></div>
+            <div class="quadrant quadrant-2" id="circle-7-quadrant-2"></div>
+            <div class="quadrant quadrant-3" id="circle-7-quadrant-3"></div>
+            <div class="quadrant quadrant-4" id="circle-7-quadrant-4"></div>
+            <div class="arrow" id="circle-7-arrow"></div>
+        </div>
+        <!-- Circle 8 -->
+        <div class="circle" id="circle-8">
+            <div class="quadrant quadrant-1" id="circle-8-quadrant-1"></div>
+            <div class="quadrant quadrant-2" id="circle-8-quadrant-2"></div>
+            <div class="quadrant quadrant-3" id="circle-8-quadrant-3"></div>
+            <div class="quadrant quadrant-4" id="circle-8-quadrant-4"></div>
+            <div class="arrow" id="circle-8-arrow"></div>
+        </div>
+        <!-- Circle 9 -->
+        <div class="circle" id="circle-9">
+            <div class="quadrant quadrant-1" id="circle-9-quadrant-1"></div>
+            <div class="quadrant quadrant-2" id="circle-9-quadrant-2"></div>
+            <div class="quadrant quadrant-3" id="circle-9-quadrant-3"></div>
+            <div class="quadrant quadrant-4" id="circle-9-quadrant-4"></div>
+            <div class="arrow" id="circle-9-arrow"></div>
+        </div>
+        <!-- Circle 10 -->
+        <div class="circle" id="circle-10">
+            <div class="quadrant quadrant-1" id="circle-10-quadrant-1"></div>
+            <div class="quadrant quadrant-2" id="circle-10-quadrant-2"></div>
+            <div class="quadrant quadrant-3" id="circle-10-quadrant-3"></div>
+            <div class="quadrant quadrant-4" id="circle-10-quadrant-4"></div>
+            <div class="arrow" id="circle-10-arrow"></div>
+        </div>
+        <!-- Circle 11 -->
+        <div class="circle" id="circle-11">
+            <div class="quadrant quadrant-1" id="circle-11-quadrant-1"></div>
+            <div class="quadrant quadrant-2" id="circle-11-quadrant-2"></div>
+            <div class="quadrant quadrant-3" id="circle-11-quadrant-3"></div>
+            <div class="quadrant quadrant-4" id="circle-11-quadrant-4"></div>
+            <div class="arrow" id="circle-11-arrow"></div>
+        </div>
+        <!-- Circle 12 -->
+        <div class="circle" id="circle-12">
+            <div class="quadrant quadrant-1" id="circle-12-quadrant-1"></div>
+            <div class="quadrant quadrant-2" id="circle-12-quadrant-2"></div>
+            <div class="quadrant quadrant-3" id="circle-12-quadrant-3"></div>
+            <div class="quadrant quadrant-4" id="circle-12-quadrant-4"></div>
+            <div class="arrow" id="circle-12-arrow"></div>
+        </div>
+        <!-- Circle 13 -->
+        <div class="circle" id="circle-13">
+            <div class="quadrant quadrant-1" id="circle-13-quadrant-1"></div>
+            <div class="quadrant quadrant-2" id="circle-13-quadrant-2"></div>
+            <div class="quadrant quadrant-3" id="circle-13-quadrant-3"></div>
+            <div class="quadrant quadrant-4" id="circle-13-quadrant-4"></div>
+            <div class="arrow" id="circle-13-arrow"></div>
+        </div>
+        <!-- Circle 14 -->
+        <div class="circle" id="circle-14">
+            <div class="quadrant quadrant-1" id="circle-14-quadrant-1"></div>
+            <div class="quadrant quadrant-2" id="circle-14-quadrant-2"></div>
+            <div class="quadrant quadrant-3" id="circle-14-quadrant-3"></div>
+            <div class="quadrant quadrant-4" id="circle-14-quadrant-4"></div>
+            <div class="arrow" id="circle-14-arrow"></div>
+        </div>
+        <!-- Circle 15 -->
+        <div class="circle" id="circle-15">
+            <div class="quadrant quadrant-1" id="circle-15-quadrant-1"></div>
+            <div class="quadrant quadrant-2" id="circle-15-quadrant-2"></div>
+            <div class="quadrant quadrant-3" id="circle-15-quadrant-3"></div>
+            <div class="quadrant quadrant-4" id="circle-15-quadrant-4"></div>
+            <div class="arrow" id="circle-15-arrow"></div>
+        </div>
+        <!-- Circle 16 -->
+        <div class="circle" id="circle-16">
+            <div class="quadrant quadrant-1" id="circle-16-quadrant-1"></div>
+            <div class="quadrant quadrant-2" id="circle-16-quadrant-2"></div>
+            <div class="quadrant quadrant-3" id="circle-16-quadrant-3"></div>
+            <div class="quadrant quadrant-4" id="circle-16-quadrant-4"></div>
+            <div class="arrow" id="circle-16-arrow"></div>
+        </div>
     </div>
-    % endfor
-</div>
 
-<!-- Socket.IO 4.x -->
-<script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
-<script>
-(() => {
-    const container = document.getElementById("container");
-    const W = container.offsetWidth, H = container.offsetHeight;
-    const CX = W / 2, CY = H * 0.8, RX = W / 2.5, RY = H / 1.5;
-    const circles = [...document.querySelectorAll(".circle")];
-    const N = circles.length;
+    <!-- Socket.IO 4.x 客户端 -->
+    <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+    <script>
+        // 布局：将 16 个圆均匀放在 U 型曲线上
+        const container = document.getElementById("container");
+        const W = container.offsetWidth, H = container.offsetHeight;
+        const CX = W / 2, CY = H * 0.8, RX = W / 2.5, RY = H / 1.5;
+        const circles = document.querySelectorAll(".circle");
+        const N = circles.length;
 
-    // 初始 U 型排布
-    circles.forEach((c, i) => {
-        const ang = Math.PI - (Math.PI / (N - 1)) * i;
-        c.style.left = `${CX + RX * Math.cos(ang) - 20}px`;
-        c.style.top  = `${CY - RY * Math.sin(ang) - 20}px`;
-    });
+        circles.forEach((c, i) => {
+            const ang = Math.PI - (Math.PI / (N - 1)) * i;
+            c.style.left = `${CX + RX * Math.cos(ang) - 20}px`;
+            c.style.top  = `${CY - RY * Math.sin(ang) - 20}px`;
+        });
 
-    // Socket.IO
-    const socket = io();
+        // WebSocket 连接
+        const socket = io();
 
-    socket.on("update_colors", ({values}) => {
-        for (let i = 0; i < N; i++) {
-            const vals = values.slice(i * 4, i * 4 + 4);
-            let maxIdx = 0, maxVal = vals[0];
+        socket.on('update_colors', ({values}) => {
+            for (let i = 0; i < N; i++) {
+                const seg = values.slice(i * 4, i * 4 + 4);
+                let maxIdx = 0, maxVal = seg[0];
 
-            for (let j = 0; j < 4; j++) {
-                const v = vals[j];
-                const q = document.querySelector(`#circle-${i+1}-quadrant-${j+1}`);
-                const intensity = Math.min(255, v);           // 防止溢出
-                q.style.backgroundColor = `rgb(${intensity},${intensity},${intensity})`;
-                if (v > maxVal) { maxVal = v; maxIdx = j; }
+                for (let j = 0; j < 4; j++) {
+                    const v = seg[j];
+                    const q = document.getElementById(`circle-${i + 1}-quadrant-${j + 1}`);
+                    const intensity = Math.min(255, v);
+                    q.style.backgroundColor = `rgb(${intensity},${intensity},${intensity})`;
+                    if (v > maxVal) { maxVal = v; maxIdx = j; }
+                }
+                const arrow = document.getElementById(`circle-${i + 1}-arrow`);
+                const angMap = [315, 45, 225, 135];   // 指向最大值象限
+                arrow.style.transform = `translate(-50%, -100%) rotate(${angMap[maxIdx]}deg)`;
             }
-
-            const arrow = document.getElementById(`circle-${i+1}-arrow`);
-            const angleMap = [315, 45, 225, 135];            // NW, NE, SW, SE
-            arrow.style.transform = `translate(-50%,-100%) rotate(${angleMap[maxIdx]}deg)`;
-        }
-    });
-})();
-</script>
+        });
+    </script>
 </body>
 </html>
