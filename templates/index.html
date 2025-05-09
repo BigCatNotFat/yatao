@@ -1,652 +1,74 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>U-Shaped Curve Layout with Dynamic Colors and Arrows</title>
-    <style>
-        body {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            background-color: #f4f4f4;
-        }
-
-        .container {
-            position: relative;
-            width: 500px; /* 容器宽度 */
-            height: 300px; /* 容器高度 */
-            background-color: transparent; /* 背景透明 */
-        }
-
-        .circle {
-            position: absolute;
-            width: 40px; /* 圆形的宽度 */
-            border: 1px solid #000;
-            height: 40px; /* 圆形的高度 */
-            border-radius: 50%; /* 圆形样式 */
-            overflow: hidden; /* 使象限超出部分被裁剪 */
-        }
-
-        .quadrant {
-            position: absolute;
-            width: 50%;
-            height: 50%;
-        }
-
-        .quadrant-1 {
-            top: 0;
-            left: 0;
-            border-right: 1px solid #000;
-            border-bottom: 1px solid #000;
-        }
-
-        .quadrant-2 {
-            top: 0;
-            left: 50%;
-            border-left: 1px solid #000;
-            border-bottom: 1px solid #000;
-        }
-
-        .quadrant-3 {
-            top: 50%;
-            left: 0;
-            border-right: 1px solid #000;
-            border-top: 1px solid #000;
-        }
-
-        .quadrant-4 {
-            top: 50%;
-            left: 50%;
-            border-left: 1px solid #000;
-            border-top: 1px solid #000;
-        }
-
-        .arrow {
-            position: absolute;
-            width: 2px; /* 箭头杆的宽度 */
-            height: 15px; /* 箭头杆的长度 */
-            background-color: red; /* 箭头颜色 */
-            left: 50%;
-            top: 50%;
-            transform-origin: bottom center;
-            transform: translate(-50%, -100%) rotate(0deg);
-        }
-
-        .arrow::after {
-            content: '';
-            position: absolute;
-            left: 50%;
-            top: 0;
-            transform: translate(-50%, -50%);
-            border-left: 5px solid transparent;
-            border-right: 5px solid transparent;
-            border-bottom: 7px solid red; /* 箭头颜色 */
-        }
-        
-        /* 状态指示器样式 */
-        .status {
-            position: fixed;
-            top: 10px;
-            right: 10px;
-            padding: 5px 10px;
-            background-color: #f0f0f0;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            font-family: Arial, sans-serif;
-            font-size: 12px;
-            z-index: 1000;
-        }
-        
-        /* 添加控制面板 */
-        .control-panel {
-            position: fixed;
-            top: 10px;
-            left: 10px;
-            padding: 10px;
-            background-color: rgba(255, 255, 255, 0.8);
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            z-index: 1000;
-        }
-        
-        .control-panel button {
-            margin: 5px;
-            padding: 5px 10px;
-        }
-        
-        .control-panel label {
-            display: block;
-            margin: 5px 0;
-        }
-    </style>
+<meta charset="UTF-8">
+<title>U-Shaped Grid – Real-time Display</title>
+<style>
+    body{display:flex;justify-content:center;align-items:center;height:100vh;margin:0;background:#f4f4f4}
+    .container{position:relative;width:500px;height:300px}
+    .circle{position:absolute;width:40px;height:40px;border:1px solid #000;border-radius:50%;overflow:hidden}
+    .quadrant{position:absolute;width:50%;height:50%}
+    .quadrant-1{top:0;left:0;border-right:1px solid #000;border-bottom:1px solid #000}
+    .quadrant-2{top:0;left:50%;border-left:1px solid #000;border-bottom:1px solid #000}
+    .quadrant-3{top:50%;left:0;border-right:1px solid #000;border-top:1px solid #000}
+    .quadrant-4{top:50%;left:50%;border-left:1px solid #000;border-top:1px solid #000}
+    .arrow{position:absolute;width:2px;height:15px;background:red;left:50%;top:50%;transform-origin:bottom center;transform:translate(-50%,-100%) rotate(0deg)}
+    .arrow::after{content:'';position:absolute;left:50%;top:0;transform:translate(-50%,-50%);border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:7px solid red}
+</style>
 </head>
 <body>
-    <!-- 状态指示器 -->
-    <div class="status" id="status">
-        <div>连接状态: <span id="connection-status">未连接</span></div>
-        <div>数据接收: <span id="data-rate">0</span> 帧/秒</div>
-        <div>上次接收: <span id="last-received">-</span></div>
-        <div>更新间隔: <span id="update-interval">2000</span> 毫秒</div>
+<div class="container" id="container">
+    <!-- 16 circles × 4 quadrants × 1 arrow -->
+    <!-- 用 JS 循环可简化，但此处保持与原版对应 -->
+    % for n in range(1, 17):
+    <div class="circle" id="circle-{{n}}">
+        % for q in range(1, 5):
+        <div class="quadrant quadrant-{{q}}" id="circle-{{n}}-quadrant-{{q}}"></div>
+        % endfor
+        <div class="arrow" id="circle-{{n}}-arrow"></div>
     </div>
-    
-    <!-- 控制面板 -->
-    <div class="control-panel">
-        <h3>控制面板</h3>
-        <label>
-            更新频率:
-            <select id="update-frequency">
-                <option value="500">0.5秒</option>
-                <option value="1000">1秒</option>
-                <option value="2000" selected>2秒</option>
-                <option value="3000">3秒</option>
-                <option value="5000">5秒</option>
-                <option value="10000">10秒</option>
-            </select>
-        </label>
-        <label>
-            变化阈值:
-            <input type="range" id="change-threshold" min="0" max="50" value="20" step="5">
-            <span id="threshold-value">20%</span>
-        </label>
-        <label>
-            <input type="checkbox" id="enable-averaging" checked>
-            启用数据平滑
-        </label>
-        <button id="pause-updates">暂停更新</button>
-        <button id="reconnect">重新连接</button>
-    </div>
+    % endfor
+</div>
 
-    <div class="container" id="container">
-        <!-- 16个圆形元素，每个包含四个象限和一个箭头 -->
-        <!-- 以下是从circle-1到circle-16的完整列表 -->
+<!-- Socket.IO 4.x -->
+<script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+<script>
+(() => {
+    const container = document.getElementById("container");
+    const W = container.offsetWidth, H = container.offsetHeight;
+    const CX = W / 2, CY = H * 0.8, RX = W / 2.5, RY = H / 1.5;
+    const circles = [...document.querySelectorAll(".circle")];
+    const N = circles.length;
 
-        <!-- Circle 1 -->
-        <div class="circle" id="circle-1">
-            <div class="quadrant quadrant-1" id="circle-1-quadrant-1"></div>
-            <div class="quadrant quadrant-2" id="circle-1-quadrant-2"></div>
-            <div class="quadrant quadrant-3" id="circle-1-quadrant-3"></div>
-            <div class="quadrant quadrant-4" id="circle-1-quadrant-4"></div>
-            <div class="arrow" id="circle-1-arrow"></div>
-        </div>
-        <!-- Circle 2 -->
-        <div class="circle" id="circle-2">
-            <div class="quadrant quadrant-1" id="circle-2-quadrant-1"></div>
-            <div class="quadrant quadrant-2" id="circle-2-quadrant-2"></div>
-            <div class="quadrant quadrant-3" id="circle-2-quadrant-3"></div>
-            <div class="quadrant quadrant-4" id="circle-2-quadrant-4"></div>
-            <div class="arrow" id="circle-2-arrow"></div>
-        </div>
-        <!-- Circle 3 -->
-        <div class="circle" id="circle-3">
-            <div class="quadrant quadrant-1" id="circle-3-quadrant-1"></div>
-            <div class="quadrant quadrant-2" id="circle-3-quadrant-2"></div>
-            <div class="quadrant quadrant-3" id="circle-3-quadrant-3"></div>
-            <div class="quadrant quadrant-4" id="circle-3-quadrant-4"></div>
-            <div class="arrow" id="circle-3-arrow"></div>
-        </div>
-        <!-- Circle 4 -->
-        <div class="circle" id="circle-4">
-            <div class="quadrant quadrant-1" id="circle-4-quadrant-1"></div>
-            <div class="quadrant quadrant-2" id="circle-4-quadrant-2"></div>
-            <div class="quadrant quadrant-3" id="circle-4-quadrant-3"></div>
-            <div class="quadrant quadrant-4" id="circle-4-quadrant-4"></div>
-            <div class="arrow" id="circle-4-arrow"></div>
-        </div>
-        <!-- Circle 5 -->
-        <div class="circle" id="circle-5">
-            <div class="quadrant quadrant-1" id="circle-5-quadrant-1"></div>
-            <div class="quadrant quadrant-2" id="circle-5-quadrant-2"></div>
-            <div class="quadrant quadrant-3" id="circle-5-quadrant-3"></div>
-            <div class="quadrant quadrant-4" id="circle-5-quadrant-4"></div>
-            <div class="arrow" id="circle-5-arrow"></div>
-        </div>
-        <!-- Circle 6 -->
-        <div class="circle" id="circle-6">
-            <div class="quadrant quadrant-1" id="circle-6-quadrant-1"></div>
-            <div class="quadrant quadrant-2" id="circle-6-quadrant-2"></div>
-            <div class="quadrant quadrant-3" id="circle-6-quadrant-3"></div>
-            <div class="quadrant quadrant-4" id="circle-6-quadrant-4"></div>
-            <div class="arrow" id="circle-6-arrow"></div>
-        </div>
-        <!-- Circle 7 -->
-        <div class="circle" id="circle-7">
-            <div class="quadrant quadrant-1" id="circle-7-quadrant-1"></div>
-            <div class="quadrant quadrant-2" id="circle-7-quadrant-2"></div>
-            <div class="quadrant quadrant-3" id="circle-7-quadrant-3"></div>
-            <div class="quadrant quadrant-4" id="circle-7-quadrant-4"></div>
-            <div class="arrow" id="circle-7-arrow"></div>
-        </div>
-        <!-- Circle 8 -->
-        <div class="circle" id="circle-8">
-            <div class="quadrant quadrant-1" id="circle-8-quadrant-1"></div>
-            <div class="quadrant quadrant-2" id="circle-8-quadrant-2"></div>
-            <div class="quadrant quadrant-3" id="circle-8-quadrant-3"></div>
-            <div class="quadrant quadrant-4" id="circle-8-quadrant-4"></div>
-            <div class="arrow" id="circle-8-arrow"></div>
-        </div>
-        <!-- Circle 9 -->
-        <div class="circle" id="circle-9">
-            <div class="quadrant quadrant-1" id="circle-9-quadrant-1"></div>
-            <div class="quadrant quadrant-2" id="circle-9-quadrant-2"></div>
-            <div class="quadrant quadrant-3" id="circle-9-quadrant-3"></div>
-            <div class="quadrant quadrant-4" id="circle-9-quadrant-4"></div>
-            <div class="arrow" id="circle-9-arrow"></div>
-        </div>
-        <!-- Circle 10 -->
-        <div class="circle" id="circle-10">
-            <div class="quadrant quadrant-1" id="circle-10-quadrant-1"></div>
-            <div class="quadrant quadrant-2" id="circle-10-quadrant-2"></div>
-            <div class="quadrant quadrant-3" id="circle-10-quadrant-3"></div>
-            <div class="quadrant quadrant-4" id="circle-10-quadrant-4"></div>
-            <div class="arrow" id="circle-10-arrow"></div>
-        </div>
-        <!-- Circle 11 -->
-        <div class="circle" id="circle-11">
-            <div class="quadrant quadrant-1" id="circle-11-quadrant-1"></div>
-            <div class="quadrant quadrant-2" id="circle-11-quadrant-2"></div>
-            <div class="quadrant quadrant-3" id="circle-11-quadrant-3"></div>
-            <div class="quadrant quadrant-4" id="circle-11-quadrant-4"></div>
-            <div class="arrow" id="circle-11-arrow"></div>
-        </div>
-        <!-- Circle 12 -->
-        <div class="circle" id="circle-12">
-            <div class="quadrant quadrant-1" id="circle-12-quadrant-1"></div>
-            <div class="quadrant quadrant-2" id="circle-12-quadrant-2"></div>
-            <div class="quadrant quadrant-3" id="circle-12-quadrant-3"></div>
-            <div class="quadrant quadrant-4" id="circle-12-quadrant-4"></div>
-            <div class="arrow" id="circle-12-arrow"></div>
-        </div>
-        <!-- Circle 13 -->
-        <div class="circle" id="circle-13">
-            <div class="quadrant quadrant-1" id="circle-13-quadrant-1"></div>
-            <div class="quadrant quadrant-2" id="circle-13-quadrant-2"></div>
-            <div class="quadrant quadrant-3" id="circle-13-quadrant-3"></div>
-            <div class="quadrant quadrant-4" id="circle-13-quadrant-4"></div>
-            <div class="arrow" id="circle-13-arrow"></div>
-        </div>
-        <!-- Circle 14 -->
-        <div class="circle" id="circle-14">
-            <div class="quadrant quadrant-1" id="circle-14-quadrant-1"></div>
-            <div class="quadrant quadrant-2" id="circle-14-quadrant-2"></div>
-            <div class="quadrant quadrant-3" id="circle-14-quadrant-3"></div>
-            <div class="quadrant quadrant-4" id="circle-14-quadrant-4"></div>
-            <div class="arrow" id="circle-14-arrow"></div>
-        </div>
-        <!-- Circle 15 -->
-        <div class="circle" id="circle-15">
-            <div class="quadrant quadrant-1" id="circle-15-quadrant-1"></div>
-            <div class="quadrant quadrant-2" id="circle-15-quadrant-2"></div>
-            <div class="quadrant quadrant-3" id="circle-15-quadrant-3"></div>
-            <div class="quadrant quadrant-4" id="circle-15-quadrant-4"></div>
-            <div class="arrow" id="circle-15-arrow"></div>
-        </div>
-        <!-- Circle 16 -->
-        <div class="circle" id="circle-16">
-            <div class="quadrant quadrant-1" id="circle-16-quadrant-1"></div>
-            <div class="quadrant quadrant-2" id="circle-16-quadrant-2"></div>
-            <div class="quadrant quadrant-3" id="circle-16-quadrant-3"></div>
-            <div class="quadrant quadrant-4" id="circle-16-quadrant-4"></div>
-            <div class="arrow" id="circle-16-arrow"></div>
-        </div>
-    </div>
+    // 初始 U 型排布
+    circles.forEach((c, i) => {
+        const ang = Math.PI - (Math.PI / (N - 1)) * i;
+        c.style.left = `${CX + RX * Math.cos(ang) - 20}px`;
+        c.style.top  = `${CY - RY * Math.sin(ang) - 20}px`;
+    });
 
-    <!-- 引入 Socket.IO 客户端库 -->
-    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
-    <script>
-        // 获取容器的宽高
-        const container = document.getElementById("container");
-        const containerWidth = container.offsetWidth;
-        const containerHeight = container.offsetHeight;
+    // Socket.IO
+    const socket = io();
 
-        // 设置曲线参数
-        const centerX = containerWidth / 2; // U型曲线的中心点X坐标
-        const centerY = containerHeight * 0.8; // U型曲线的中心点Y坐标
-        const radiusX = containerWidth / 2.5; // 水平半径
-        const radiusY = containerHeight / 1.5;  // 垂直半径
+    socket.on("update_colors", ({values}) => {
+        for (let i = 0; i < N; i++) {
+            const vals = values.slice(i * 4, i * 4 + 4);
+            let maxIdx = 0, maxVal = vals[0];
 
-        // 获取所有圆形元素
-        const circles = document.querySelectorAll(".circle");
-        const totalCircles = circles.length;
-
-        // 使用正弦曲线将圆形分布在U形上
-        circles.forEach((circle, index) => {
-            const angle = Math.PI - (Math.PI / (totalCircles - 1)) * index; // 计算当前点的角度
-            const x = centerX + radiusX * Math.cos(angle); // x坐标
-            const y = centerY - radiusY * Math.sin(angle); // y坐标
-
-            // 设置圆形的位置
-            circle.style.left = `${x - 20}px`; // 圆心X坐标 - 圆形半径
-            circle.style.top = `${y - 20}px`;  // 圆心Y坐标 - 圆形半径
-        });
-
-        // 获取状态和控制元素
-        const connectionStatus = document.getElementById('connection-status');
-        const dataRate = document.getElementById('data-rate');
-        const lastReceived = document.getElementById('last-received');
-        const updateIntervalDisplay = document.getElementById('update-interval');
-        const updateFrequencySelect = document.getElementById('update-frequency');
-        const changeThresholdInput = document.getElementById('change-threshold');
-        const thresholdValueDisplay = document.getElementById('threshold-value');
-        const enableAveragingCheckbox = document.getElementById('enable-averaging');
-        const pauseUpdatesButton = document.getElementById('pause-updates');
-        const reconnectButton = document.getElementById('reconnect');
-
-        // 数据处理设置
-        let updateInterval = parseInt(updateFrequencySelect.value); // 更新间隔（毫秒）
-        let changeThreshold = parseInt(changeThresholdInput.value); // 变化阈值（百分比）
-        let enableAveraging = enableAveragingCheckbox.checked; // 是否启用数据平滑
-        let updatesPaused = false; // 是否暂停更新
-        
-        // 数据缓存和统计
-        let lastUpdateTime = 0; // 上次更新时间
-        let lastDisplayedData = null; // 上次显示的数据
-        let dataQueue = []; // 数据队列，用于平滑处理
-        let maxQueueLength = 3; // 队列最大长度
-        
-        // 数据接收计数器
-        let frameCount = 0;
-        let lastSecond = Date.now();
-        
-        // 每秒更新数据接收速率
-        setInterval(() => {
-            const now = Date.now();
-            const elapsed = (now - lastSecond) / 1000;
-            const rate = Math.round(frameCount / elapsed);
-            
-            dataRate.textContent = rate;
-            frameCount = 0;
-            lastSecond = now;
-        }, 1000);
-        
-        // 绑定控制面板事件
-        updateFrequencySelect.addEventListener('change', function() {
-            updateInterval = parseInt(this.value);
-            updateIntervalDisplay.textContent = updateInterval;
-        });
-        
-        changeThresholdInput.addEventListener('input', function() {
-            changeThreshold = parseInt(this.value);
-            thresholdValueDisplay.textContent = changeThreshold + "%";
-        });
-        
-        enableAveragingCheckbox.addEventListener('change', function() {
-            enableAveraging = this.checked;
-            // 清空数据队列
-            dataQueue = [];
-        });
-        
-        pauseUpdatesButton.addEventListener('click', function() {
-            updatesPaused = !updatesPaused;
-            this.textContent = updatesPaused ? "恢复更新" : "暂停更新";
-        });
-        
-        reconnectButton.addEventListener('click', function() {
-            if (socket.connected) {
-                socket.disconnect();
-                setTimeout(() => socket.connect(), 500);
-            } else {
-                socket.connect();
+            for (let j = 0; j < 4; j++) {
+                const v = vals[j];
+                const q = document.querySelector(`#circle-${i+1}-quadrant-${j+1}`);
+                const intensity = Math.min(255, v);           // 防止溢出
+                q.style.backgroundColor = `rgb(${intensity},${intensity},${intensity})`;
+                if (v > maxVal) { maxVal = v; maxIdx = j; }
             }
-        });
 
-        // 修改Socket.IO连接配置，尝试解决连接问题
-        const socket = io({
-            // 允许先polling后websocket的传输顺序
-            transports: ['polling', 'websocket'],
-            reconnection: true,
-            reconnectionAttempts: Infinity,
-            reconnectionDelay: 1000,
-            reconnectionDelayMax: 5000,
-            timeout: 20000,
-            // 添加额外的配置
-            forceNew: true,             // 强制创建新连接
-            multiplex: false           // 禁用多路复用
-        });
-        
-        // 添加Socket.IO调试日志
-        socket.onAny((event, ...args) => {
-            console.log('收到任何事件:', event, args);
-        });
-        
-        // 监听所有Socket.IO内部事件
-        socket.io.on("error", (error) => {
-            console.error('Socket.IO错误:', error);
-        });
-        
-        socket.io.on("reconnect_attempt", (attempt) => {
-            console.log('尝试重连, 次数:', attempt);
-        });
-        
-        socket.io.on("reconnect_error", (error) => {
-            console.error('重连错误:', error);
-        });
-        
-        socket.io.on("reconnect_failed", () => {
-            console.error('重连失败');
-        });
-
-        // 向控制台添加更多调试信息
-        socket.on('connect', () => {
-            connectionStatus.textContent = '已连接';
-            connectionStatus.style.color = 'green';
-            console.log('已连接到服务器, ID:', socket.id, '传输模式:', socket.io.engine.transport.name);
-            
-            // 临时发送一个测试消息来检查连接
-            socket.emit('test_connection', {message: '测试连接'});
-            
-            // 尝试手动触发一个请求查询数据
-            setTimeout(() => {
-                console.log('尝试请求数据');
-                socket.emit('request_data');
-            }, 1000);
-        });
-        
-        // 为兼容性添加直接监听message事件
-        socket.on('message', (data) => {
-            console.log('收到通用message事件:', data);
-            // 尝试将通用消息作为数据处理
-            if (data && data.values && Array.isArray(data.values)) {
-                updateCircles(data.values);
-                frameCount++;
-            }
-        });
-
-        // 具体事件监听
-        socket.on('update_colors', (data) => {
-            console.log('收到update_colors事件:', data);
-            if (!data || !data.values) {
-                console.error('数据格式错误:', data);
-                return;
-            }
-            
-            const values = data.values;
-            frameCount++;
-            updateCircles(values);
-        });
-        
-        // 添加一个简单的心跳检测
-        let heartbeatInterval = setInterval(() => {
-            if (socket.connected) {
-                socket.emit('heartbeat', { time: Date.now() });
-            }
-        }, 10000);
-        
-        // 定期检测连接状态并尝试重连
-        setInterval(() => {
-            if (!socket.connected) {
-                connectionStatus.textContent = '尝试重连...';
-                connectionStatus.style.color = 'blue';
-                socket.connect();
-            } else {
-                // 输出当前传输模式
-                console.log('当前传输模式:', socket.io.engine.transport.name);
-            }
-        }, 5000);
-        
-        // 添加调试按钮功能
-        document.getElementById('reconnect').addEventListener('dblclick', function() {
-            console.log('强制尝试新连接');
-            socket.disconnect();
-            
-            // 完全重新创建socket连接
-            setTimeout(() => {
-                try {
-                    // 尝试使用原始简单方式连接
-                    const newSocket = io();
-                    console.log('使用默认配置创建新连接');
-                    
-                    // 设置基本事件监听
-                    newSocket.on('connect', () => {
-                        console.log('新连接成功');
-                        // 替换全局socket对象
-                        socket = newSocket;
-                    });
-                    
-                    newSocket.on('update_colors', (data) => {
-                        console.log('新连接收到数据:', data);
-                        updateCircles(data.values);
-                    });
-                } catch (e) {
-                    console.error('创建新连接失败:', e);
-                    socket.connect(); // 失败则使用原连接
-                }
-            }, 1000);
-        });
-        
-        // 添加直接轮询测试功能
-        let pollingEnabled = false;
-        const pollingButton = document.createElement('button');
-        pollingButton.textContent = '启用HTTP轮询';
-        pollingButton.style.margin = '5px';
-        pollingButton.onclick = function() {
-            pollingEnabled = !pollingEnabled;
-            this.textContent = pollingEnabled ? '停止HTTP轮询' : '启用HTTP轮询';
-            
-            if (pollingEnabled) {
-                // 开始HTTP轮询
-                console.log('开始HTTP轮询');
-                pollData();
-            }
-        };
-        document.querySelector('.control-panel').appendChild(pollingButton);
-        
-        // HTTP轮询函数
-        function pollData() {
-            if (!pollingEnabled) return;
-            
-            fetch('/api/data')
-                .then(response => {
-                    if (!response.ok) throw new Error('HTTP请求失败');
-                    return response.json();
-                })
-                .then(data => {
-                    console.log('HTTP轮询获取数据:', data);
-                    if (data && data.values) {
-                        updateCircles(data.values);
-                        frameCount++;
-                    }
-                })
-                .catch(error => {
-                    console.error('HTTP轮询错误:', error);
-                })
-                .finally(() => {
-                    // 继续轮询
-                    if (pollingEnabled) {
-                        setTimeout(pollData, 2000);
-                    }
-                });
+            const arrow = document.getElementById(`circle-${i+1}-arrow`);
+            const angleMap = [315, 45, 225, 135];            // NW, NE, SW, SE
+            arrow.style.transform = `translate(-50%,-100%) rotate(${angleMap[maxIdx]}deg)`;
         }
-
-        // 数据处理函数：检查数据变化是否显著
-        function hasSignificantChange(oldData, newData) {
-            if (!oldData || !newData) return true;
-            
-            const changes = newData.filter((val, idx) => 
-                Math.abs(val - oldData[idx]) > 10
-            ).length;
-            
-            const changePercent = (changes / newData.length) * 100;
-            return changePercent >= changeThreshold;
-        }
-        
-        // 数据平滑处理
-        function smoothData(newData) {
-            if (!enableAveraging) return newData;
-            
-            // 添加新数据到队列
-            dataQueue.push(newData);
-            
-            // 保持队列长度
-            if (dataQueue.length > maxQueueLength) {
-                dataQueue.shift();
-            }
-            
-            // 如果队列中只有一个数据，直接返回
-            if (dataQueue.length === 1) return newData;
-            
-            // 计算平均值
-            const result = new Array(newData.length).fill(0);
-            for (let i = 0; i < newData.length; i++) {
-                let sum = 0;
-                for (let j = 0; j < dataQueue.length; j++) {
-                    sum += dataQueue[j][i];
-                }
-                result[i] = Math.round(sum / dataQueue.length);
-            }
-            
-            return result;
-        }
-
-        // 更新视图的节流函数
-        function updateCircles(values) {
-            // 如果更新被暂停，不处理
-            if (updatesPaused) return;
-            
-            const now = Date.now();
-            
-            // 检查是否应该更新
-            if (now - lastUpdateTime < updateInterval) return;
-            
-            // 应用数据平滑
-            const smoothedValues = smoothData(values);
-            
-            // 检查数据变化
-            if (!hasSignificantChange(lastDisplayedData, smoothedValues)) return;
-            
-            // 更新时间和显示数据
-            lastUpdateTime = now;
-            lastDisplayedData = [...smoothedValues];
-            lastReceived.textContent = new Date().toLocaleTimeString();
-            
-            // 更新UI
-            for (let i = 0; i < totalCircles; i++) {
-                const circleValues = smoothedValues.slice(i * 4, i * 4 + 4); // 获取当前圆的4个象限值
-                let maxIndex = 0;
-                let maxValue = circleValues[0];
-
-                // 更新每个象限的背景颜色，并找到最大值的象限
-                for (let j = 0; j < 4; j++) {
-                    const quadrantValue = circleValues[j];
-                    const quadrant = document.querySelector(`#circle-${i + 1} .quadrant-${j + 1}`);
-                    const intensity = quadrantValue; // 假设值在0-255之间
-                    quadrant.style.backgroundColor = `rgb(${intensity}, ${intensity}, ${intensity})`;
-
-                    if (quadrantValue > maxValue) {
-                        maxValue = quadrantValue;
-                        maxIndex = j; // 记录最大值的象限索引
-                    }
-                }
-
-                // 更新箭头方向
-                const arrow = document.getElementById(`circle-${i + 1}-arrow`);
-                const angleMap = [315, 45, 225, 135];
-                const angle = angleMap[maxIndex];
-                arrow.style.transform = `translate(-50%, -100%) rotate(${angle}deg)`;
-            }
-        }
-    </script>
+    });
+})();
+</script>
 </body>
 </html>
-
